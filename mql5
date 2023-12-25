@@ -1,0 +1,102 @@
+mql5
+//+------------------------------------------------------------------+
+//|                                                     Gold Stream  |
+//|                                        https://forexroboteasy.com|
+//|                                                        Forex Robot Easy Team|
+//+------------------------------------------------------------------+
+
+// Input parameters
+input double StopLoss = 100;    // Stop loss in pips
+input double TakeProfit = 200;  // Take profit in pips
+
+// Global variables
+double lastPrice = 0;           // Last known price
+double lastVolume = 0;          // Last known volume
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                         |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+    // Register indicator buffers
+    IndicatorSetInteger(INDICATOR_DIGITS, Digits);
+    SetIndexBuffer(0, ExtMapBuffer1);
+    SetIndexBuffer(1, ExtMapBuffer2);
+
+    // Set indicator labels
+    SetIndexLabel(0, 'Buy');
+    SetIndexLabel(1, 'Sell');
+
+    return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator iteration function                              |
+//+------------------------------------------------------------------+
+int OnCalculate(const int rates_total,
+                const int prev_calculated,
+                const datetime &time[],
+                const double &open[],
+                const double &high[],
+                const double &low[],
+                const double &close[],
+                const long &tick_volume[],
+                const long &volume[],
+                const int &spread[])
+{
+    // Calculate trend direction
+    int trend = 0;
+    if (close[1] > close[2]) trend = 1;  // Upwards trend
+    else if (close[1] < close[2]) trend = -1;  // Downwards trend
+
+    // Determine if a trade should be placed
+    if (trend != 0 && lastVolume != volume[0])
+    {
+        double stopLoss = 0;
+        double takeProfit = 0;
+
+        // Check trend direction for entry
+        if (trend == 1)
+        {
+            // Calculate StopLoss and TakeProfit levels for buy trade
+            stopLoss = close[0] - StopLoss * _Point;
+            takeProfit = close[0] + TakeProfit * _Point;
+
+            // Place buy trade
+            if (OrderSend(Symbol(), OP_BUY, volume[0], close[0], 0, stopLoss, takeProfit) > 0)
+            {
+                // Trade placed successfully
+            }
+            else
+            {
+                // Error placing trade
+                Print('Error placing buy trade: ', GetLastError());
+            }
+        }
+        else if (trend == -1)
+        {
+            // Calculate StopLoss and TakeProfit levels for sell trade
+            stopLoss = close[0] + StopLoss * _Point;
+            takeProfit = close[0] - TakeProfit * _Point;
+
+            // Place sell trade
+            if (OrderSend(Symbol(), OP_SELL, volume[0], close[0], 0, stopLoss, takeProfit) > 0)
+            {
+                // Trade placed successfully
+            }
+            else
+            {
+                // Error placing trade
+                Print('Error placing sell trade: ', GetLastError());
+            }
+        }
+
+        // Update last known volume
+        lastVolume = volume[0];
+    }
+
+    // Update last known price
+    lastPrice = close[0];
+
+    return(rates_total);
+}
